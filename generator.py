@@ -181,12 +181,18 @@ def detail(kurz, teraz):
 
 
 def pismo(sablona, druh, velkost):
-    cesta = sablona["pisma"].get(druh)
-    if cesta and not os.path.isabs(cesta):
-        cesta = os.path.join(ROOT, cesta)
-    if not cesta or not os.path.exists(cesta):
-        cesta = sablona["pisma"]["zaloha_" + druh]
-    return ImageFont.truetype(cesta, velkost)
+    zadane = sablona["pisma"].get(druh) or ""
+    kandidati = [
+        zadane if os.path.isabs(zadane) else os.path.join(ROOT, zadane),
+        os.path.join(ROOT, os.path.basename(zadane)),
+        os.path.join(ROOT, "fonty", os.path.basename(zadane)),
+        sablona["pisma"].get("zaloha_" + druh, ""),
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf" if druh == "tucne" else "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+    ]
+    for cesta in kandidati:
+        if cesta and os.path.isfile(cesta):
+            return ImageFont.truetype(cesta, velkost)
+    return ImageFont.load_default(velkost)
 
 
 def zalom(draw, text, font, sirka):
