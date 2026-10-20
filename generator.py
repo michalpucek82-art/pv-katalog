@@ -1,5 +1,6 @@
 import argparse
 import csv
+import hashlib
 import json
 import os
 import re
@@ -275,6 +276,14 @@ def skrat(d, text, font, sirka):
     return text.rstrip(" ,") + "…"
 
 
+def hladko(img, box, kresli, q=4):
+    x0, y0, x1, y1 = box
+    w, h = x1 - x0 + 4, y1 - y0 + 4
+    vrstva = Image.new("RGBA", (w * q, h * q), (0, 0, 0, 0))
+    kresli(ImageDraw.Draw(vrstva), q, 2 * q)
+    img.alpha_composite(vrstva.resize((w, h), Image.LANCZOS), (x0 - 2, y0 - 2))
+
+
 def vyrenderuj(k, sablona, cache):
     img = pozadie(sablona, k["okruh"])
     d = ImageDraw.Draw(img)
@@ -291,11 +300,16 @@ def vyrenderuj(k, sablona, cache):
     text = t[k["format"]]
     v = s["vyska"]
     sirka = int(v * 0.42 + v * 0.55 + 14 + d.textlength(text, font=fs) + v * 0.5)
-    d.rounded_rectangle((s["x"], s["y"], s["x"] + sirka, s["y"] + v), radius=v // 2, fill=f["stitok_vypln"], outline=f["stitok_okraj"], width=2)
     r = int(v * 0.27)
     cx, cy = s["x"] + int(v * 0.5), s["y"] + v // 2
-    d.ellipse((cx - r, cy - r, cx + r, cy + r), fill=f["tlacidlo"])
-    d.polygon([(cx - r * 0.3, cy - r * 0.45), (cx - r * 0.3, cy + r * 0.45), (cx + r * 0.5, cy)], fill="#ffffff")
+
+    def stitok(dd, q, o):
+        dd.rounded_rectangle((o, o, o + sirka * q, o + v * q), radius=v * q // 2, fill=f["stitok_vypln"], outline=f["stitok_okraj"], width=2 * q)
+        sx, sy = o + (cx - s["x"]) * q, o + (cy - s["y"]) * q
+        dd.ellipse((sx - r * q, sy - r * q, sx + r * q, sy + r * q), fill=f["tlacidlo"])
+        dd.polygon([(sx - r * q * 0.3, sy - r * q * 0.45), (sx - r * q * 0.3, sy + r * q * 0.45), (sx + r * q * 0.5, sy)], fill="#ffffff")
+
+    hladko(img, (s["x"], s["y"], s["x"] + sirka, s["y"] + v), stitok)
     d.text((cx + r + 14, cy), text, font=fs, fill=f["text"], anchor="lm")
 
     s = p["okruh"]
@@ -342,7 +356,7 @@ def vyrenderuj(k, sablona, cache):
     d.text((s["x"], s["y"]), poznamka, font=pismo(sablona, "normal", s["velkost"]), fill=f["seda"])
 
     s = p["tlacidlo"]
-    d.rounded_rectangle((s["x"], s["y"], s["x"] + s["sirka"], s["y"] + s["vyska"]), radius=8, fill=f["tlacidlo"])
+    hladko(img, (s["x"], s["y"], s["x"] + s["sirka"], s["y"] + s["vyska"]), lambda dd, q, o: dd.rounded_rectangle((o, o, o + s["sirka"] * q, o + s["vyska"] * q), radius=8 * q, fill=f["tlacidlo"]))
     d.text((s["x"] + s["sirka"] // 2, s["y"] + s["vyska"] // 2), s["text"], font=pismo(sablona, "tucne", s["velkost"]), fill="#ffffff", anchor="mm")
     return img.convert("RGB")
 
@@ -357,7 +371,7 @@ def nahlad(cesty, ciel, stlpce=5, velkost=300):
 
 def galeria(polozky, ciel):
     karty = "".join(
-        f'<figure><a href="img/{p["key"]}.png"><img src="img/{p["key"]}.png" loading="lazy"></a>'
+        f'<figure><a href="img/{p["key"]}.png?v={p["verzia"]}"><img src="img/{p["key"]}.png?v={p["verzia"]}" loading="lazy"></a>'
         f'<figcaption><b>{p["okruh"]}</b> · {p["datum"]}<br>{p["nazov"]}</figcaption></figure>'
         for p in sorted(polozky, key=lambda x: (x["okruh"], x["dni_do"]))
     )
@@ -409,6 +423,8 @@ def main():
                 break
         cesta = os.path.join(a.out, "img", f"{k['key']}.png")
         vyrenderuj(k, sablona, cache).save(cesta, optimize=True)
+        with open(cesta, "rb") as f:
+            k["verzia"] = hashlib.md5(f.read()).hexdigest()[:8]
         obrazky.append(cesta)
         polozky.append(k)
         for v in k["vstupenky"]:
@@ -421,7 +437,7 @@ def main():
                 "condition": "new",
                 "price": f"{float(v['cena']):.2f} EUR",
                 "link": k["link"],
-                "image_link": a.base_url.rstrip("/") + f"/img/{k['key']}.png",
+                "image_link": a.base_url.rstrip("/") + f"/img/{k['key']}.png?v={k['verzia']}",
                 "brand": "Profivzdelávanie",
                 "custom_label_0": "okruh_hlavny_" + k["okruh"],
                 "custom_label_1": naliehavost(k["dni_do"]),
