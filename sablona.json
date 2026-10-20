@@ -1,0 +1,37 @@
+{
+  "rozmer": [1080, 1080],
+  "pozadie": {
+    "dane": "sablony/dane.png",
+    "mzdy": "sablony/mzdy.png",
+    "verejna_sprava": "sablony/verejna_sprava.png",
+    "skolstvo": "sablony/skolstvo.png",
+    "ine": "sablony/ine.png"
+  },
+  "pozadie_farba_ak_chyba_png": {
+    "dane": "#0b4f8a",
+    "mzdy": "#5b2a86",
+    "verejna_sprava": "#0f6b4f",
+    "skolstvo": "#c2410c",
+    "ine": "#334155"
+  },
+  "pisma": {
+    "tucne": "fonty/Montserrat-Bold.ttf",
+    "normal": "fonty/Montserrat-Medium.ttf",
+    "zaloha_tucne": "C:/Windows/Fonts/arialbd.ttf",
+    "zaloha_normal": "C:/Windows/Fonts/arial.ttf"
+  },
+  "prvky": {
+    "stitok": {"x": 80, "y": 90, "pismo": "normal", "velkost": 34, "farba": "#ffffff"},
+    "nazov": {"x": 80, "y": 170, "sirka": 920, "max_riadkov": 4, "pismo": "tucne", "velkost_max": 72, "velkost_min": 44, "riadkovanie": 1.15, "farba": "#ffffff"},
+    "datum": {"x": 80, "y": 860, "pismo": "tucne", "velkost": 52, "farba": "#ffffff"},
+    "lektor": {"x": 80, "y": 935, "sirka": 560, "pismo": "normal", "velkost": 34, "farba": "#ffffff"},
+    "foto": {"x": 700, "y": 640, "priemer": 300, "okraj": 8, "okraj_farba": "#ffffff"}
+  },
+  "vylucit_ak_nazov_obsahuje": ["transparentn", "rovnak", "minimáln", "dávk", "dôchod", "životné minimum"],
+  "prepis_okruhu": {"e-faktúr": "dane"},
+  "texty": {
+    "online": "Online školenie",
+    "zazitkove": "Zážitkové školenie",
+    "prezencne": "Prezenčné školenie"
+  }
+}
