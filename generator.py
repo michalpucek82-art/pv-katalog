@@ -77,18 +77,22 @@ def zber_kurzov():
     return kurzy
 
 
+SKOLA = re.compile(r"skol|ucitel|pedagog|ziak|materske|riaditel")
+
+
 def hlavny_okruh(kurzy):
-    pocet = {}
     for k in kurzy.values():
-        for o in k["okruhy"]:
-            pocet[o] = pocet.get(o, 0) + 1
-    for k in kurzy.values():
-        if k["skolstvo"]:
-            k["hlavny"] = "skolstvo"
-        elif k["okruhy"]:
-            k["hlavny"] = min(k["okruhy"], key=lambda o: (pocet[o], o))
-        else:
+        o = k["okruhy"]
+        if len(o) >= 3 or not o:
             k["hlavny"] = "ine"
+        elif "mzdy" in o:
+            k["hlavny"] = "mzdy"
+        elif "dane" in o:
+            k["hlavny"] = "dane"
+        elif k["skolstvo"] and SKOLA.search(k["slug"]):
+            k["hlavny"] = "skolstvo"
+        else:
+            k["hlavny"] = "verejna_sprava"
 
 
 def cisty_nazov(nazov):
@@ -290,6 +294,24 @@ def nahlad(cesty, ciel, stlpce=5, velkost=300):
     plocha.save(ciel, quality=85)
 
 
+def galeria(polozky, ciel):
+    karty = "".join(
+        f'<figure><a href="img/{p["key"]}.png"><img src="img/{p["key"]}.png" loading="lazy"></a>'
+        f'<figcaption><b>{p["okruh"]}</b> · {p["datum"]}<br>{p["nazov"]}</figcaption></figure>'
+        for p in sorted(polozky, key=lambda x: (x["okruh"], x["dni_do"]))
+    )
+    html = (
+        '<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
+        "<title>PV katalóg</title><style>body{font-family:system-ui;margin:16px;background:#f4f4f5}"
+        "main{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px}"
+        "figure{margin:0;background:#fff;padding:8px;border-radius:6px}img{width:100%;display:block}"
+        "figcaption{font-size:12px;margin-top:6px}</style>"
+        f"<h1>PV katalóg · {len(polozky)} školení · <a href='feed.csv'>feed.csv</a></h1><main>{karty}</main>"
+    )
+    with open(ciel, "w", encoding="utf-8") as f:
+        f.write(html)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default=os.path.join(ROOT, "out"))
@@ -309,7 +331,7 @@ def main():
     hlavny_okruh(kurzy)
     print(f"Kurzov v katalógu: {len(kurzy)}")
 
-    riadky, obrazky = [], []
+    riadky, obrazky, polozky = [], [], []
     for i, kurz in enumerate(kurzy.values()):
         if a.limit and len(obrazky) >= a.limit:
             break
@@ -327,6 +349,7 @@ def main():
         cesta = os.path.join(a.out, "img", f"{k['key']}.png")
         vyrenderuj(k, sablona, cache).save(cesta, optimize=True)
         obrazky.append(cesta)
+        polozky.append(k)
         for v in k["vstupenky"]:
             riadky.append({
                 "id": v["id"],
@@ -350,6 +373,7 @@ def main():
         w = csv.DictWriter(f, fieldnames=STLPCE)
         w.writeheader()
         w.writerows(riadky)
+    galeria(polozky, os.path.join(a.out, "index.html"))
     if a.nahlad and obrazky:
         nahlad(obrazky, os.path.join(a.out, "nahlad.jpg"))
     print(f"Hotovo: {len(obrazky)} obrázkov, {len(riadky)} riadkov feedu -> {a.out}")
