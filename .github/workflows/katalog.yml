@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: read
+  actions: write
   pages: write
   id-token: write
 
@@ -25,6 +26,9 @@ jobs:
       - run: pip install pillow==11.3.0
       - run: python generator.py --out site --base-url "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/"
       - run: rm -rf site/.foto
+      - run: gh api -X PUT repos/${{ github.repository }}/actions/workflows/katalog.yml/enable
+        env:
+          GH_TOKEN: ${{ github.token }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site
