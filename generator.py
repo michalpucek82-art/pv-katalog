@@ -393,6 +393,7 @@ def main():
     ap.add_argument("--base-url", default="https://DOPLNIT.github.io/pv-katalog/")
     ap.add_argument("--limit", type=int, default=0)
     ap.add_argument("--nahlad", action="store_true")
+    ap.add_argument("--minimum", type=int, default=30)
     a = ap.parse_args()
     sys.stdout.reconfigure(encoding="utf-8")
 
@@ -428,6 +429,8 @@ def main():
         obrazky.append(cesta)
         polozky.append(k)
         for v in k["vstupenky"]:
+            if v["cena"] is None:
+                continue
             riadky.append({
                 "id": v["id"],
                 "item_group_id": k["key"],
@@ -445,6 +448,10 @@ def main():
                 "custom_label_3": k["datum"],
             })
         print(f"  {k['okruh']:15} {k['datum']:22} {k['nazov'][:70]}")
+
+    if not a.limit and len(polozky) < a.minimum:
+        print(f"CHYBA: len {len(polozky)} školení (minimum {a.minimum}), feed sa neprepíše")
+        sys.exit(1)
 
     with open(os.path.join(a.out, "feed.csv"), "w", encoding="utf-8", newline="") as f:
         w = csv.DictWriter(f, fieldnames=STLPCE)
