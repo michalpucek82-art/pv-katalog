@@ -7,13 +7,18 @@
     "skolstvo": "sablony/skolstvo.png",
     "ine": "sablony/ine.png"
   },
-  "pozadie_farba_ak_chyba_png": {
-    "dane": "#0b4f8a",
-    "mzdy": "#5b2a86",
-    "verejna_sprava": "#0f6b4f",
-    "skolstvo": "#c2410c",
-    "ine": "#334155"
+  "farby": {
+    "pozadie": "#f8f9fa",
+    "ziara": "#c6e6f0",
+    "text": "#161616",
+    "seda": "#6b7075",
+    "akcent": "#3aa8cc",
+    "tlacidlo": "#56bcd9",
+    "stitok_vypln": "#ebf4f7",
+    "stitok_okraj": "#9fd3e4",
+    "ciara": "#e3e6e9"
   },
+  "logo": {"subor": "logo.png", "x": 108, "y": 100, "sirka": 175},
   "pisma": {
     "tucne": "fonty/Montserrat-Bold.ttf",
     "normal": "fonty/Montserrat-Medium.ttf",
@@ -21,17 +26,30 @@
     "zaloha_normal": "C:/Windows/Fonts/arial.ttf"
   },
   "prvky": {
-    "stitok": {"x": 80, "y": 90, "pismo": "normal", "velkost": 34, "farba": "#ffffff"},
-    "nazov": {"x": 80, "y": 170, "sirka": 920, "max_riadkov": 4, "pismo": "tucne", "velkost_max": 72, "velkost_min": 44, "riadkovanie": 1.15, "farba": "#ffffff"},
-    "datum": {"x": 80, "y": 860, "pismo": "tucne", "velkost": 52, "farba": "#ffffff"},
-    "lektor": {"x": 80, "y": 935, "sirka": 560, "pismo": "normal", "velkost": 34, "farba": "#ffffff"},
-    "foto": {"x": 700, "y": 640, "priemer": 300, "okraj": 8, "okraj_farba": "#ffffff"}
+    "stitok": {"x": 108, "y": 225, "vyska": 48, "velkost": 23},
+    "okruh": {"x": 108, "y": 302, "velkost": 24},
+    "nazov": {"x": 108, "y": 345, "sirka": 864, "max_riadkov": 4, "velkost_max": 62, "velkost_min": 40, "riadkovanie": 1.18},
+    "lektor": {"x": 108, "y": 680, "priemer": 128, "okraj": 7, "text_x": 270, "sirka": 700, "velkost": 30},
+    "ciara": {"y": 872},
+    "datum": {"x": 108, "y": 902, "velkost": 40},
+    "poznamka": {"x": 108, "y": 958, "velkost": 20},
+    "tlacidlo": {"x": 793, "y": 900, "sirka": 179, "vyska": 60, "velkost": 24, "text": "Zistiť viac"}
+  },
+  "nazvy_okruhov": {
+    "dane": "Dane a účtovníctvo",
+    "mzdy": "Mzdy a personalistika",
+    "verejna_sprava": "Verejná správa",
+    "skolstvo": "Školstvo",
+    "ine": ""
   },
   "vylucit_ak_nazov_obsahuje": ["transparentn", "rovnak", "minimáln", "dávk", "dôchod", "životné minimum"],
   "prepis_okruhu": {"e-faktúr": "dane"},
   "texty": {
     "online": "Online školenie",
     "zazitkove": "Zážitkové školenie",
-    "prezencne": "Prezenčné školenie"
+    "prezencne": "Prezenčné školenie",
+    "skoli": "ŠKOLÍ",
+    "poznamka_online": "Videozáznam na 30 dní · materiály na stiahnutie",
+    "poznamka_ine": "Materiály na stiahnutie · otázky lektorovi"
   }
 }

@@ -8,7 +8,7 @@ import time
 import urllib.request
 from datetime import datetime, timezone
 
-from PIL import Image, ImageDraw, ImageFont, ImageOps
+from PIL import Image, ImageDraw, ImageFilter, ImageFont, ImageOps
 
 BASE = "https://profivzdelavanie.sk"
 FOTO_URL = "https://wcm.prod.pp.sk/media/people/{}"
@@ -219,11 +219,25 @@ def pozadie(sablona, okruh):
     cesta = os.path.join(ROOT, sablona["pozadie"].get(okruh, sablona["pozadie"]["ine"]))
     if os.path.exists(cesta):
         return Image.open(cesta).convert("RGBA").resize((w, h))
-    farba = sablona["pozadie_farba_ak_chyba_png"].get(okruh, "#334155")
-    return Image.new("RGBA", (w, h), farba)
+    f = sablona["farby"]
+    img = Image.new("RGBA", (w, h), f["pozadie"])
+    ziara = Image.new("L", (w, h), 0)
+    ImageDraw.Draw(ziara).ellipse((int(w * 0.45), -int(h * 0.55), int(w * 1.45), int(h * 0.45)), fill=255)
+    ziara = ziara.filter(ImageFilter.GaussianBlur(w // 6))
+    img.paste(Image.new("RGBA", (w, h), f["ziara"]), (0, 0), ziara)
+    return img
 
 
-def foto_kruh(foto_id, priemer, okraj, okraj_farba, cache):
+def logo(sablona):
+    l = sablona["logo"]
+    for cesta in (os.path.join(ROOT, l["subor"]), os.path.join(ROOT, os.path.basename(l["subor"]))):
+        if os.path.isfile(cesta):
+            img = Image.open(cesta).convert("RGBA")
+            return img.resize((l["sirka"], round(img.height * l["sirka"] / img.width)), Image.LANCZOS)
+    return None
+
+
+def foto_kruh(foto_id, priemer, okraj, cache):
     cesta = os.path.join(cache, f"{foto_id}.png")
     if not os.path.exists(cesta):
         data = stiahni(FOTO_URL.format(foto_id), binarne=True)
@@ -231,58 +245,105 @@ def foto_kruh(foto_id, priemer, okraj, okraj_farba, cache):
             return None
         with open(cesta, "wb") as f:
             f.write(data)
+    q = 4
     img = Image.open(cesta).convert("RGBA")
-    img = ImageOps.fit(img, (priemer, priemer), centering=(0.5, 0.3))
-    maska = Image.new("L", (priemer, priemer), 0)
-    ImageDraw.Draw(maska).ellipse((0, 0, priemer, priemer), fill=255)
+    img = ImageOps.fit(img, (priemer * q, priemer * q), Image.LANCZOS, centering=(0.5, 0.3))
     vonkajsi = priemer + 2 * okraj
-    out = Image.new("RGBA", (vonkajsi, vonkajsi), (0, 0, 0, 0))
-    ImageDraw.Draw(out).ellipse((0, 0, vonkajsi, vonkajsi), fill=okraj_farba)
-    out.paste(img, (okraj, okraj), maska)
-    return out
+    tien = 24
+    velky = Image.new("RGBA", (vonkajsi * q, vonkajsi * q), (255, 255, 255, 0))
+    kruh = Image.new("L", velky.size, 0)
+    ImageDraw.Draw(kruh).ellipse((0, 0, vonkajsi * q - 1, vonkajsi * q - 1), fill=255)
+    velky.paste(Image.new("RGBA", velky.size, "#ffffff"), (0, 0), kruh)
+    maska = Image.new("L", img.size, 0)
+    ImageDraw.Draw(maska).ellipse((0, 0, priemer * q - 1, priemer * q - 1), fill=255)
+    velky.paste(img, (okraj * q, okraj * q), maska)
+    maly = velky.resize((vonkajsi, vonkajsi), Image.LANCZOS)
+    out = Image.new("RGBA", (vonkajsi + 2 * tien, vonkajsi + 2 * tien), (0, 0, 0, 0))
+    st = Image.new("L", out.size, 0)
+    ImageDraw.Draw(st).ellipse((tien, tien + 6, tien + vonkajsi, tien + vonkajsi + 6), fill=60)
+    st = st.filter(ImageFilter.GaussianBlur(10))
+    out.paste(Image.new("RGBA", out.size, (0, 0, 0, 255)), (0, 0), st)
+    out.alpha_composite(maly, (tien, tien))
+    return out, tien
+
+
+def skrat(d, text, font, sirka):
+    if d.textlength(text, font=font) <= sirka:
+        return text
+    while text and d.textlength(text + "…", font=font) > sirka:
+        text = text[:-1]
+    return text.rstrip(" ,") + "…"
 
 
 def vyrenderuj(k, sablona, cache):
     img = pozadie(sablona, k["okruh"])
     d = ImageDraw.Draw(img)
     p = sablona["prvky"]
+    f = sablona["farby"]
+    t = sablona["texty"]
+
+    lg = logo(sablona)
+    if lg:
+        img.alpha_composite(lg, (sablona["logo"]["x"], sablona["logo"]["y"]))
 
     s = p["stitok"]
-    d.text((s["x"], s["y"]), sablona["texty"][k["format"]], font=pismo(sablona, s["pismo"], s["velkost"]), fill=s["farba"])
+    fs = pismo(sablona, "normal", s["velkost"])
+    text = t[k["format"]]
+    v = s["vyska"]
+    sirka = int(v * 0.42 + v * 0.55 + 14 + d.textlength(text, font=fs) + v * 0.5)
+    d.rounded_rectangle((s["x"], s["y"], s["x"] + sirka, s["y"] + v), radius=v // 2, fill=f["stitok_vypln"], outline=f["stitok_okraj"], width=2)
+    r = int(v * 0.27)
+    cx, cy = s["x"] + int(v * 0.5), s["y"] + v // 2
+    d.ellipse((cx - r, cy - r, cx + r, cy + r), fill=f["tlacidlo"])
+    d.polygon([(cx - r * 0.3, cy - r * 0.45), (cx - r * 0.3, cy + r * 0.45), (cx + r * 0.5, cy)], fill="#ffffff")
+    d.text((cx + r + 14, cy), text, font=fs, fill=f["text"], anchor="lm")
+
+    s = p["okruh"]
+    nazov_okruhu = sablona["nazvy_okruhov"].get(k["okruh"], "")
+    if nazov_okruhu:
+        d.text((s["x"], s["y"]), nazov_okruhu, font=pismo(sablona, "tucne", s["velkost"]), fill=f["akcent"])
 
     n = p["nazov"]
     velkost = n["velkost_max"]
     while True:
-        f = pismo(sablona, n["pismo"], velkost)
-        riadky = zalom(d, k["nazov"], f, n["sirka"])
+        fn = pismo(sablona, "tucne", velkost)
+        riadky = zalom(d, k["nazov"], fn, n["sirka"])
         if len(riadky) <= n["max_riadkov"] or velkost <= n["velkost_min"]:
             break
         velkost -= 2
     if len(riadky) > n["max_riadkov"]:
         riadky = riadky[:n["max_riadkov"]]
         riadky[-1] = riadky[-1].rstrip(",;:") + "…"
-    y = n["y"]
-    for r in riadky:
-        d.text((n["x"], y), r, font=f, fill=n["farba"])
+    y = n["y"] if nazov_okruhu else p["okruh"]["y"]
+    for riadok in riadky:
+        d.text((n["x"], y), riadok, font=fn, fill=f["text"])
         y += int(velkost * n["riadkovanie"])
 
-    s = p["datum"]
-    d.text((s["x"], s["y"]), k["datum"], font=pismo(sablona, s["pismo"], s["velkost"]), fill=s["farba"])
-
     s = p["lektor"]
-    fl = pismo(sablona, s["pismo"], s["velkost"])
-    lektor = k["lektor"]
-    if d.textlength(lektor, font=fl) > s["sirka"]:
-        while lektor and d.textlength(lektor + "…", font=fl) > s["sirka"]:
-            lektor = lektor[:-1]
-        lektor = lektor.rstrip(" ,") + "…"
-    d.text((s["x"], s["y"]), lektor, font=fl, fill=s["farba"])
+    if k["lektor"]:
+        tx = s["x"]
+        if k["foto"]:
+            vysledok = foto_kruh(k["foto"], s["priemer"], s["okraj"], cache)
+            if vysledok:
+                kruh, tien = vysledok
+                img.alpha_composite(kruh, (s["x"] - tien, s["y"] - tien))
+                tx = s["text_x"]
+        stred = s["y"] + s["okraj"] + s["priemer"] // 2
+        d.text((tx, stred - 30), t["skoli"], font=pismo(sablona, "tucne", 18), fill=f["akcent"], anchor="ls")
+        fl = pismo(sablona, "tucne", s["velkost"])
+        d.text((tx, stred + 18), skrat(d, k["lektor"], fl, s["sirka"] - (tx - s["x"])), font=fl, fill=f["text"], anchor="ls")
 
-    s = p["foto"]
-    if k["foto"]:
-        kruh = foto_kruh(k["foto"], s["priemer"], s["okraj"], s["okraj_farba"], cache)
-        if kruh:
-            img.alpha_composite(kruh, (s["x"], s["y"]))
+    d.line((p["datum"]["x"], p["ciara"]["y"], sablona["rozmer"][0] - p["datum"]["x"], p["ciara"]["y"]), fill=f["ciara"], width=2)
+
+    s = p["datum"]
+    d.text((s["x"], s["y"]), k["datum"], font=pismo(sablona, "tucne", s["velkost"]), fill=f["text"])
+    s = p["poznamka"]
+    poznamka = t["poznamka_online"] if k["format"] == "online" else t["poznamka_ine"]
+    d.text((s["x"], s["y"]), poznamka, font=pismo(sablona, "normal", s["velkost"]), fill=f["seda"])
+
+    s = p["tlacidlo"]
+    d.rounded_rectangle((s["x"], s["y"], s["x"] + s["sirka"], s["y"] + s["vyska"]), radius=8, fill=f["tlacidlo"])
+    d.text((s["x"] + s["sirka"] // 2, s["y"] + s["vyska"] // 2), s["text"], font=pismo(sablona, "tucne", s["velkost"]), fill="#ffffff", anchor="mm")
     return img.convert("RGB")
 
 
