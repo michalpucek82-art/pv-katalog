@@ -149,6 +149,8 @@ def detail(kurz, teraz):
         return None
     buduce = []
     for d in tr.get("dates") or []:
+        if (d.get("date") or {}).get("state") == 2:
+            continue
         od = (d.get("date") or {}).get("from")
         if not od:
             continue
